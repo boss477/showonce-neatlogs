@@ -47,6 +47,20 @@ class Slack:
                     self._channel_id = channel["id"]; return self._channel_id
             cursor = page.get("response_metadata", {}).get("next_cursor")
             if not cursor: raise RuntimeError(f"Slack channel {self.channel} not found; invite the bot or set SLACK_CHANNEL to the channel ID")
+    def fetch_bug_reports(self, oldest):
+        """Human, top-level messages newer than `oldest` that mention the trigger word, oldest first."""
+        if not self.token: return []
+        history = self._api("conversations.history", {"channel": self.channel_id(), "oldest": oldest, "limit": 100})
+        reports = [
+            {"ts": m["ts"], "text": m.get("text", ""), "user": m.get("user")}
+            for m in history["messages"]
+            if not m.get("bot_id") and not m.get("subtype") and m.get("thread_ts", m["ts"]) == m["ts"]
+            and self.trigger in m.get("text", "").lower()
+        ]
+        return sorted(reports, key=lambda r: float(r["ts"]))
+    def permalink(self, ts):
+        if not self.token: return None
+        return self._api("chat.getPermalink", {"channel": self.channel_id(), "message_ts": ts}).get("permalink")
     def post(self, message, thread_ts=None):
         if not self.token:
             return {"mock": True, "provider": "Slack", "channel": self.channel, "thread_ts": thread_ts, "message": message, "status": "DRAFT"}
