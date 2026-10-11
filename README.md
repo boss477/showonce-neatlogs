@@ -1,6 +1,6 @@
 # ShowOnce
 
-Show your agent the job once. It compiles a walkthrough into a workflow contract, runs it with traced steps, verifies each contract, and recovers from failures with checkpointed context.
+Show your agent the job once. It compiles a walkthrough into a workflow contract, runs it with traced steps, verifies each contract, and recovers from failures with checkpointed context. The flagship demo is evidence-bound payout routing: code decides whether a route is deliverable, while the agent explains only what the evidence supports.
 
 ## The demo wow moment
 
@@ -18,6 +18,8 @@ Copy `.env.example` to `.env` and set `NEATLOGS_PROJECT_KEY`, `SLACK_BOT_TOKEN`,
 python cli.py watch            # poll Slack every 15s; --once for a single pass
 python cli.py handle "bug: add(2,3) returns -1"   # run one report without reading Slack
 python cli.py inject-bug       # put the sample bug back to demo again
+python cli.py payout ID wise 4900   # deterministic refusal with source evidence
+python evals/payout_eval.py        # baseline vs ShowOnce payout benchmark
 ```
 
 For each new top-level Slack message containing `SLACK_TRIGGER` (default `bug`), ShowOnce creates a Linear issue, acknowledges in the Slack thread, fixes `sample_repo`, runs its real test, then closes the Linear issue (moves it to the team's Done state with a comment) and replies "Code has been fixed" in the thread. It also posts to Teams if `TEAMS_WEBHOOK_URL` is set. If the test still fails, the issue stays open with the test output attached. `watch` starts from "now", so older channel history is not processed; its position is kept in `evidence/slack_watch_state.json`.
