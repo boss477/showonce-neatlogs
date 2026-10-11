@@ -17,7 +17,8 @@ class RecoveryRunner:
         self.memory = FailureMemory()
         self.seen = {}
     def checkpoint(self, step_id, context):
-        path = self.checkpoint_dir / f"retry-{step_id}-{len(list(self.checkpoint_dir.glob('retry-*')) + 1)}.json"
+        next_number = len(list(self.checkpoint_dir.glob('retry-*'))) + 1
+        path = self.checkpoint_dir / f"retry-{step_id}-{next_number}.json"
         path.write_text(json.dumps({"step": step_id, "context": context, "decision": "restore before retry"}, indent=2) + "\n")
         return str(path)
     def run_step(self, step, attempt=0):

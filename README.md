@@ -2,6 +2,12 @@
 
 Show your agent the job once. It compiles a walkthrough into a workflow contract, runs it with traced steps, verifies each contract, and recovers from failures with checkpointed context.
 
+## The demo wow moment
+
+The implement worker receives a bug report, creates a Linear issue, changes the sample repo, and hits an injected failing test. It then calls the Neatlogs MCP: `search_traces` finds the failed run and `get_trace_context` reads the span tree. ShowOnce uses that evidence to retry from an Entire checkpoint, reruns the test, and produces a draft Slack/Linear update for human approval.
+
+Set `NEATLOGS_PROJECT_KEY` to use live Neatlogs MCP. With no key, the same sequence runs with clearly labelled MOCK trace context; no fake production result is reported.
+
 ## Architecture
 
 ```mermaid
@@ -38,4 +44,3 @@ Example checkpoint: `evidence/entire/retry-fix-1.json` records the failed step, 
 ## Measured results and limitations
 
 Run `python evals/run_recovery.py`; it writes timestamped JSON and CSV without overwriting prior runs. The bundled harness is deterministic and offline, so its token/cost fields are zero and are not evidence of LLM performance. Any unreachable model call must be marked `INVALID` and excluded. This prototype does not claim to solve recovery; it measures the recovery behavior available in each run.
-
