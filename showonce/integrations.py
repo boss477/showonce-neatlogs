@@ -102,3 +102,21 @@ class Linear:
         query = "mutation($input: IssueCreateInput!){ issueCreate(input:$input){ success issue { id identifier url title } } }"
         variables = {"input": {"teamId": self._team(), "title": title, "priority": 1 if priority == "urgent" else 2, **({"description": description} if description else {})}}
         return self._graphql(query, variables)["issueCreate"]["issue"]
+    def comment(self, issue_id, body):
+        if not self.key:
+            return {"mock": True, "provider": "Linear", "issue": issue_id, "comment": body, "status": "DRAFT"}
+        query = "mutation($input: CommentCreateInput!){ commentCreate(input:$input){ success } }"
+        return self._graphql(query, {"input": {"issueId": issue_id, "body": body}})["commentCreate"]
+    def close_issue(self, issue_id, comment=None):
+        """Moves the issue to the team's first 'completed' workflow state (usually Done)."""
+        if not self.key:
+            return {"mock": True, "provider": "Linear", "issue": issue_id, "state": "Done", "comment": comment, "status": "DRAFT"}
+        if comment: self.comment(issue_id, comment)
+        states = self._graphql(
+            "query($team: ID!){ workflowStates(filter: { team: { id: { eq: $team } }, type: { eq: \"completed\" } }) { nodes { id name position } } }",
+            {"team": self._team()},
+        )["workflowStates"]["nodes"]
+        if not states: raise RuntimeError("Linear: team has no completed workflow state")
+        done = min(states, key=lambda s: s["position"])
+        query = "mutation($id: String!, $state: String!){ issueUpdate(id:$id, input:{ stateId:$state }){ success issue { identifier url state { name } } } }"
+        return self._graphql(query, {"id": issue_id, "state": done["id"]})["issueUpdate"]["issue"]
