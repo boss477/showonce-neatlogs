@@ -33,6 +33,8 @@ python cli.py demo
 python evals/run_recovery.py
 ```
 
+Open `ui/index.html` in a browser for the controlled AG-UI-style Control Room demo. It streams the recovery story visually: failed test → Neatlogs trace inspection → Entire checkpoint → human approval → passing retry. The static UI is dependency-free; its event names and flow are ready to be replaced with a live AG-UI transport when the backend is deployed.
+
 Mock Slack and Linear adapters are labelled `MOCK` in code. The sample repo fix and test are real. Set `OPENAI_API_KEY` only when connecting an LLM compiler/judge; secrets are gitignored.
 
 ## Sponsor tools
@@ -40,6 +42,7 @@ Mock Slack and Linear adapters are labelled `MOCK` in code. The sample repo fix 
 - neatlogs: `showonce.observability.init_tracing()` initializes tracing and each coordinator step is a span. See `evidence/neatlogs_dev_log.md` for two found → fixed → verified entries.
 - Entire: installed with CLI 0.11.4, enabled for Codex in `.entire/settings.json`, and used for repository checkpoints. The implement worker is configured by `entire enable --agent codex` in its own checkout. `evidence/entire/` stores retry context snapshots. The runtime fallback is local checkpoint JSON because the worker cannot assume an authenticated Entire API.
 - cfo.ai: `evidence/business_plan.md` is the requested placeholder.
+- AG-UI / CopilotKit: the control room uses the AG-UI event-driven model and controlled generative UI cards for timeline, trace evidence, checkpoint state, diffs, tests, and approvals. AG-UI is complementary to MCP: MCP supplies tools, AG-UI supplies the user-facing event stream.
 
 ### Retry and restored context
 
