@@ -1,6 +1,7 @@
 """Reproducible payout benchmark: baseline prose vs deterministic ShowOnce."""
-import csv, json
+import csv, json, sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from showonce.payout import decide
 
 CASES = [(country, provider) for country in ("ID", "IN", "PH") for provider in ("wise", "payoneer")]
@@ -21,4 +22,3 @@ def run():
 
 if __name__ == "__main__":
     result = run(); print(json.dumps({"cases": len(result), "showonce_correct": sum(r["correct"] for r in result if r["mode"] == "showonce")}, indent=2))
-
