@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from .observability import fingerprint, span
+from .observability import fingerprint, run_traced
 
 class FailureMemory:
     def __init__(self, path="evidence/failure_memory.json"):
@@ -22,8 +22,12 @@ class RecoveryRunner:
         return str(path)
     def run_step(self, step, attempt=0):
         fp = fingerprint(step.tool, step.inputs); self.seen[fp] = self.seen.get(fp, 0) + 1
-        with span(f"showonce.step.{step.id}", tool=step.tool, attempt=attempt):
-            result = self.adapters[step.tool](**step.inputs)
+        result = run_traced(
+            f"showonce.step.{step.id}",
+            lambda: self.adapters[step.tool](**step.inputs),
+            tool_name=step.tool,
+            parameters=step.inputs,
+        )
         if self.seen[fp] > 1:
             raise RuntimeError("loop detected: repeated identical call")
         return result
@@ -32,4 +36,3 @@ class RecoveryRunner:
         self.memory.add(step.tool, type(failure).__name__, "retry after restoring the failed-step context")
         fixed = fix()
         return {"checkpoint": checkpoint, "fixed": fixed}
-

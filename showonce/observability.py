@@ -19,11 +19,15 @@ def init_tracing() -> None:
 
 @contextlib.contextmanager
 def span(name: str, **attributes):
-    if neatlogs is not None and hasattr(neatlogs, "span"):
-        with neatlogs.span(name, **attributes):
-            yield
-    else:
-        yield
+    # neatlogs 1.x exposes span as a decorator, not a context manager.
+    # Keep this context API for callers and use run_traced for the actual span.
+    yield
+
+def run_traced(name: str, fn, **attributes):
+    if neatlogs is None:
+        return fn()
+    traced = neatlogs.trace(name, kind="chain", **attributes)(fn)
+    return traced()
 
 def fingerprint(tool: str, inputs: dict) -> str:
     payload = json.dumps(inputs, sort_keys=True, separators=(",", ":"))
@@ -33,4 +37,3 @@ def save_trace_note(path: str, payload: dict) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-
