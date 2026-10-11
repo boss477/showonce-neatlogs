@@ -66,6 +66,18 @@ class Slack:
             return {"mock": True, "provider": "Slack", "channel": self.channel, "thread_ts": thread_ts, "message": message, "status": "DRAFT"}
         return self._api("chat.postMessage", body={"channel": self.channel_id(), "text": message, **({"thread_ts": thread_ts} if thread_ts else {})})
 
+class Teams:
+    """Posts to a Microsoft Teams channel through an incoming webhook (or a Workflows webhook)."""
+    def __init__(self): self.webhook = os.getenv("TEAMS_WEBHOOK_URL")
+    @property
+    def live(self): return bool(self.webhook)
+    def post(self, message):
+        if not self.webhook:
+            return {"mock": True, "provider": "Teams", "message": message, "status": "DRAFT"}
+        card = {"type": "AdaptiveCard", "$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "version": "1.4",
+                "body": [{"type": "TextBlock", "text": message, "wrap": True}]}
+        return _request(self.webhook, {"type": "message", "attachments": [{"contentType": "application/vnd.microsoft.card.adaptive", "content": card}]}, {})
+
 class Linear:
     def __init__(self): self.key = os.getenv("LINEAR_API_KEY")
     @property
