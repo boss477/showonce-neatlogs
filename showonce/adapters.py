@@ -1,4 +1,6 @@
 """Clearly labelled MOCK adapters used by the demo."""
+import subprocess
+import sys
 from pathlib import Path
 
 class MockSlack:
@@ -15,6 +17,12 @@ class SampleRepo:
         target = self.root / "buggy.py"
         target.write_text(target.read_text().replace("return a - b", "return a + b"), encoding="utf-8")
         return {"fixed": True, "path": str(target)}
+    def inject_bug(self) -> dict:
+        target = self.root / "buggy.py"
+        target.write_text(target.read_text().replace("return a + b", "return a - b"), encoding="utf-8")
+        return {"injected": True, "path": str(target)}
     def test(self) -> dict:
-        return {"passed": (self.root / "buggy.py").read_text(encoding="utf-8").find("return a + b") >= 0}
+        # Run the repo's real test in a fresh interpreter so the edited module is re-imported.
+        result = subprocess.run([sys.executable, "-c", "import test_buggy; test_buggy.test_add()"], cwd=self.root, capture_output=True, text=True)
+        return {"passed": result.returncode == 0, "output": (result.stdout + result.stderr).strip()[-500:]}
 
