@@ -12,6 +12,16 @@ Set `NEATLOGS_PROJECT_KEY` to use live Neatlogs MCP. With no key, the same seque
 
 Copy `.env.example` to `.env` and set `NEATLOGS_PROJECT_KEY`, `SLACK_BOT_TOKEN`, and `LINEAR_API_KEY`. ShowOnce then queries Neatlogs MCP, posts to Slack, and creates Linear issues. Leave any key blank to use the labelled MOCK adapter. External updates should be run as drafts during the demo; use a human approval step before sending production messages.
 
+### Slack → Linear → fix → Slack/Teams pipeline
+
+```powershell
+python cli.py watch            # poll Slack every 15s; --once for a single pass
+python cli.py handle "bug: add(2,3) returns -1"   # run one report without reading Slack
+python cli.py inject-bug       # put the sample bug back to demo again
+```
+
+For each new top-level Slack message containing `SLACK_TRIGGER` (default `bug`), ShowOnce creates a Linear issue, acknowledges in the Slack thread, fixes `sample_repo`, runs its real test, then closes the Linear issue (moves it to the team's Done state with a comment) and replies "Code has been fixed" in the thread. It also posts to Teams if `TEAMS_WEBHOOK_URL` is set. If the test still fails, the issue stays open with the test output attached. `watch` starts from "now", so older channel history is not processed; its position is kept in `evidence/slack_watch_state.json`.
+
 ## Architecture
 
 ```mermaid
