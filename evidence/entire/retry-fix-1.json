@@ -1,0 +1,7 @@
+{
+  "step": "fix",
+  "failure": "tests failed after first implementation",
+  "lessons": ["restore the failed-step context before retry"],
+  "decision": "retry from checkpoint, then re-verify"
+}
+

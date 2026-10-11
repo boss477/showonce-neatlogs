@@ -1,0 +1,5 @@
+neatlogs>=0.3.0
+PyYAML>=6.0
+jsonschema>=4.20
+python-dotenv>=1.0
+
