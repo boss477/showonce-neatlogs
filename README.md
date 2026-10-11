@@ -19,7 +19,7 @@ python cli.py watch            # poll Slack every 15s; --once for a single pass
 python cli.py handle "bug: add(2,3) returns -1"   # run one report without reading Slack
 python cli.py inject-bug       # put the sample bug back to demo again
 python cli.py payout ID wise 4900   # deterministic refusal with source evidence
-python evals/payout_eval.py        # baseline vs ShowOnce payout benchmark
+python evals/payout_eval.py        # 50 synthetic baseline vs ShowOnce payout cases
 ```
 
 For each new top-level Slack message containing `SLACK_TRIGGER` (default `bug`), ShowOnce creates a Linear issue, acknowledges in the Slack thread, fixes `sample_repo`, runs its real test, then closes the Linear issue (moves it to the team's Done state with a comment) and replies "Code has been fixed" in the thread. It also posts to Teams if `TEAMS_WEBHOOK_URL` is set. If the test still fails, the issue stays open with the test output attached. `watch` starts from "now", so older channel history is not processed; its position is kept in `evidence/slack_watch_state.json`.
@@ -62,4 +62,4 @@ Example checkpoint: `evidence/entire/retry-fix-1.json` records the failed step, 
 
 ## Measured results and limitations
 
-Run `python evals/run_recovery.py`; it writes timestamped JSON and CSV without overwriting prior runs. The bundled harness is deterministic and offline, so its token/cost fields are zero and are not evidence of LLM performance. Any unreachable model call must be marked `INVALID` and excluded. This prototype does not claim to solve recovery; it measures the recovery behavior available in each run.
+Run `python evals/run_recovery.py` or `python evals/payout_eval.py`; they write JSON and CSV results. The payout cases are synthetic fixtures generated from the local demo rule sheet, not real financial records, tax advice, or evidence of actual provider eligibility. The benchmark is deterministic and offline; its baseline is a comparison scaffold until a real model is connected. Any unreachable model call must be marked `INVALID` and excluded. This prototype does not claim to solve recovery; it measures the recovery behavior available in each run.
