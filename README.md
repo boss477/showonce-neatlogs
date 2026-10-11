@@ -1,5 +1,28 @@
 # ShowOnce
 
+## Current verified demo
+
+Start `python -m showonce.server` and visit http://127.0.0.1:8765.
+The control room executes a temporary sample repository, reproduces a bug,
+verifies a deliberately wrong first patch, restores its saved source/context,
+and verifies a deterministic second patch with three independent assertions.
+Displayed output comes from actual subprocess executions. It is an offline
+fixture, with no model calls, external messages, or hosted Neatlogs lookup.
+The checkpoint in this path is local state, not an Entire checkpoint.
+
+`python evals/run_recovery.py` executes 10 variants of this same bug family
+with recovery disabled and enabled, recording test exit-code outcomes and
+elapsed time in unique JSON/CSV files. These results measure the deterministic
+fixture only, not LLM performance or diverse real-world recovery.
+
+Earlier reported payout 50/50 scores and recovery scores were hardcoded and
+are invalid performance evidence. The payout benchmark is now disabled.
+The older `ui/index.html` is a scripted visual prototype; the served control
+room uses `ui/control.html`. Neither currently integrates the AG-UI SDK.
+Earlier sponsor descriptions below describe intended integrations; live
+trace-driven model repair, authenticated Entire restore, enforceable external
+approvals, and a completed cfo.ai business model remain unfinished.
+
 Show your agent the job once. It compiles a walkthrough into a workflow contract, runs it with traced steps, verifies each contract, and recovers from failures with checkpointed context. The flagship demo is evidence-bound payout routing: code decides whether a route is deliverable, while the agent explains only what the evidence supports.
 
 ## The demo wow moment

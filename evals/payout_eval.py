@@ -11,6 +11,7 @@ CASES = [
 ][:50]
 
 def run():
+    raise RuntimeError("Retired benchmark: its baseline and correctness values were hardcoded. Use evals/run_recovery.py for executed offline fixture measurements.")
     rows = []
     for case in CASES:
         country, provider = case["country"], case["provider"]

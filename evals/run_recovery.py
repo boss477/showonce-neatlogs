@@ -1,16 +1,22 @@
-"""Small deterministic harness; invalid model calls are excluded from metrics."""
-import csv, json, time
+"""Executed fixture benchmark. Scores come from subprocess test exit codes."""
+import csv, json, sys
 from datetime import datetime, timezone
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from showonce.repair_demo import run_repair
 
 def run():
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    rows = [{"task": f"task-{i:02d}", "mode": mode, "status": "VALID", "recovery_rate": 1.0 if mode == "showonce" else 0.0, "retries": 1 if mode == "showonce" else 0, "tokens": 0, "cost": 0.0, "latency_ms": 0} for i in range(10) for mode in ("baseline", "showonce")]
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    rows = []
+    for task in range(10):
+        for mode in ("baseline", "showonce"):
+            result = run_repair(mode == "showonce", offset=task)
+            rows.append({"task": task, "mode": mode, **{k:v for k,v in result.items() if k != "events"}})
     out = Path("evals/results"); out.mkdir(parents=True, exist_ok=True)
-    (out / f"{stamp}.json").write_text(json.dumps(rows, indent=2) + "\n")
-    with (out / f"{stamp}.csv").open("w", newline="") as f:
+    with (out / f"{stamp}.json").open("x") as f:
+        json.dump(rows, f, indent=2)
+    with (out / f"{stamp}.csv").open("x", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=rows[0]); writer.writeheader(); writer.writerows(rows)
     return rows
 
 if __name__ == "__main__": print(json.dumps(run(), indent=2))
-
