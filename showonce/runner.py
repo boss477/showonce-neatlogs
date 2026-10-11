@@ -1,4 +1,5 @@
-from .adapters import MockLinear, MockSlack, SampleRepo
+from .adapters import SampleRepo
+from .integrations import Linear, Slack
 from .recovery import RecoveryRunner
 from .observability import init_tracing
 from .neatlogs_mcp import NeatlogsMCP
@@ -11,7 +12,8 @@ def demo(sample_root="sample_repo"):
         if test_calls["count"] == 1:
             raise AssertionError("MOCK injected failure: test expected add(2, 3) == 5")
         return repo.test()
-    adapters = {"linear.create_issue": MockLinear().create_issue, "slack.post": MockSlack().post, "repo.fix": repo.fix_code, "repo.test": flaky_test}
+    linear, slack = Linear(), Slack()
+    adapters = {"linear.create_issue": linear.create_issue, "slack.post": slack.post, "repo.fix": repo.fix_code, "repo.test": flaky_test}
     runner = RecoveryRunner(adapters)
     neatlogs_mcp = NeatlogsMCP()
     outputs = {}

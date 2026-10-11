@@ -8,6 +8,10 @@ The implement worker receives a bug report, creates a Linear issue, changes the 
 
 Set `NEATLOGS_PROJECT_KEY` to use live Neatlogs MCP. With no key, the same sequence runs with clearly labelled MOCK trace context; no fake production result is reported.
 
+### Live integrations
+
+Copy `.env.example` to `.env` and set `NEATLOGS_PROJECT_KEY`, `SLACK_BOT_TOKEN`, and `LINEAR_API_KEY`. ShowOnce then queries Neatlogs MCP, posts to Slack, and creates Linear issues. Leave any key blank to use the labelled MOCK adapter. External updates should be run as drafts during the demo; use a human approval step before sending production messages.
+
 ## Architecture
 
 ```mermaid
