@@ -8,5 +8,10 @@
     "tool": "repo.test",
     "failure_mode": "AssertionError",
     "lesson": "retry after restoring the failed-step context"
+  },
+  {
+    "tool": "repo.test",
+    "failure_mode": "AssertionError",
+    "lesson": "retry after restoring the failed-step context"
   }
 ]
