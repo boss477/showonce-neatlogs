@@ -1,10 +1,17 @@
 """Optional live integrations with safe MOCK fallbacks."""
 import json
 import os
+import urllib.parse
 import urllib.request
 
 def _request(url, data, headers):
     request = urllib.request.Request(url, data=json.dumps(data).encode(), headers={"Content-Type": "application/json", **headers}, method="POST")
+    with urllib.request.urlopen(request, timeout=10) as response:
+        body = response.read()
+        return json.loads(body) if body.strip().startswith((b"{", b"[")) else {"ok": True, "status": response.status}
+
+def _get(url, params, headers):
+    request = urllib.request.Request(f"{url}?{urllib.parse.urlencode(params)}", headers=headers)
     with urllib.request.urlopen(request, timeout=10) as response:
         return json.loads(response.read())
 
@@ -29,4 +36,3 @@ class Linear:
         query = "mutation($input: IssueCreateInput!){ issueCreate(input:$input){ success issue { identifier url title } } }"
         variables = {"input": {"title": title, "priority": 1 if priority == "urgent" else 2}}
         return _request("https://api.linear.app/graphql", {"query": query, "variables": variables}, {"Authorization": self.key})
-
