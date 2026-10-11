@@ -1,0 +1,8 @@
+{
+  "step": "test",
+  "context": {
+    "failure": "MOCK injected failure: test expected add(2, 3) == 5",
+    "lessons": []
+  },
+  "decision": "restore before retry"
+}

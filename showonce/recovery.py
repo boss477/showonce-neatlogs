@@ -29,7 +29,7 @@ class RecoveryRunner:
             tool_name=step.tool,
             parameters=step.inputs,
         )
-        if self.seen[fp] > 1:
+        if self.seen[fp] > 1 and attempt == 0:
             raise RuntimeError("loop detected: repeated identical call")
         return result
     def recover(self, step, failure, fix):

@@ -1,0 +1,14 @@
+{
+  "step": "test",
+  "context": {
+    "failure": "MOCK injected failure: test expected add(2, 3) == 5",
+    "lessons": [
+      {
+        "tool": "repo.test",
+        "failure_mode": "AssertionError",
+        "lesson": "retry after restoring the failed-step context"
+      }
+    ]
+  },
+  "decision": "restore before retry"
+}
