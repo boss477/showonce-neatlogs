@@ -16,15 +16,41 @@ def _get(url, params, headers):
         return json.loads(response.read())
 
 class Slack:
+    """Reads bug reports from a channel and replies in their threads.
+
+    Bot scopes: chat:write, channels:history, channels:read (groups:* for private channels).
+    """
     def __init__(self):
         self.token = os.getenv("SLACK_BOT_TOKEN")
         self.channel = os.getenv("SLACK_CHANNEL", "#showonce-demo")
+        self.trigger = os.getenv("SLACK_TRIGGER", "bug").lower()
+        self._channel_id = None
     @property
     def live(self): return bool(self.token)
-    def post(self, message):
+    def _api(self, method, params=None, body=None):
+        headers = {"Authorization": f"Bearer {self.token}"}
+        url = f"https://slack.com/api/{method}"
+        result = _request(url, body, headers) if body is not None else _get(url, params or {}, headers)
+        if not result.get("ok"):
+            raise RuntimeError(f"Slack {method} failed: {result.get('error')}")
+        return result
+    def channel_id(self):
+        """conversations.history needs an ID; resolve '#name' once."""
+        if self._channel_id: return self._channel_id
+        if not self.channel.startswith("#"):
+            self._channel_id = self.channel; return self._channel_id
+        name, cursor = self.channel[1:], None
+        while True:
+            page = self._api("conversations.list", {"types": "public_channel,private_channel", "limit": 200, **({"cursor": cursor} if cursor else {})})
+            for channel in page["channels"]:
+                if channel["name"] == name:
+                    self._channel_id = channel["id"]; return self._channel_id
+            cursor = page.get("response_metadata", {}).get("next_cursor")
+            if not cursor: raise RuntimeError(f"Slack channel {self.channel} not found; invite the bot or set SLACK_CHANNEL to the channel ID")
+    def post(self, message, thread_ts=None):
         if not self.token:
-            return {"mock": True, "provider": "Slack", "channel": self.channel, "message": message, "status": "DRAFT"}
-        return _request("https://slack.com/api/chat.postMessage", {"channel": self.channel, "text": message}, {"Authorization": f"Bearer {self.token}"})
+            return {"mock": True, "provider": "Slack", "channel": self.channel, "thread_ts": thread_ts, "message": message, "status": "DRAFT"}
+        return self._api("chat.postMessage", body={"channel": self.channel_id(), "text": message, **({"thread_ts": thread_ts} if thread_ts else {})})
 
 class Linear:
     def __init__(self): self.key = os.getenv("LINEAR_API_KEY")
