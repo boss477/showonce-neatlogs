@@ -79,12 +79,26 @@ class Teams:
         return _request(self.webhook, {"type": "message", "attachments": [{"contentType": "application/vnd.microsoft.card.adaptive", "content": card}]}, {})
 
 class Linear:
-    def __init__(self): self.key = os.getenv("LINEAR_API_KEY")
+    def __init__(self):
+        self.key = os.getenv("LINEAR_API_KEY")
+        self.team_id = os.getenv("LINEAR_TEAM_ID")
     @property
     def live(self): return bool(self.key)
-    def create_issue(self, title, priority=None):
+    def _graphql(self, query, variables=None):
+        result = _request("https://api.linear.app/graphql", {"query": query, "variables": variables or {}}, {"Authorization": self.key})
+        if result.get("errors"):
+            raise RuntimeError(f"Linear API error: {result['errors'][0].get('message')}")
+        return result["data"]
+    def _team(self):
+        """Uses LINEAR_TEAM_ID, or the first team the key can see."""
+        if not self.team_id:
+            teams = self._graphql("{ teams(first: 1) { nodes { id key } } }")["teams"]["nodes"]
+            if not teams: raise RuntimeError("Linear: no teams visible to this API key")
+            self.team_id = teams[0]["id"]
+        return self.team_id
+    def create_issue(self, title, priority=None, description=None):
         if not self.key:
-            return {"mock": True, "provider": "Linear", "identifier": "SHOW-1", "title": title, "priority": priority, "status": "DRAFT"}
-        query = "mutation($input: IssueCreateInput!){ issueCreate(input:$input){ success issue { identifier url title } } }"
-        variables = {"input": {"title": title, "priority": 1 if priority == "urgent" else 2}}
-        return _request("https://api.linear.app/graphql", {"query": query, "variables": variables}, {"Authorization": self.key})
+            return {"mock": True, "provider": "Linear", "id": "mock-show-1", "identifier": "SHOW-1", "title": title, "priority": priority, "status": "DRAFT"}
+        query = "mutation($input: IssueCreateInput!){ issueCreate(input:$input){ success issue { id identifier url title } } }"
+        variables = {"input": {"teamId": self._team(), "title": title, "priority": 1 if priority == "urgent" else 2, **({"description": description} if description else {})}}
+        return self._graphql(query, variables)["issueCreate"]["issue"]
