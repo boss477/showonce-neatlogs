@@ -55,6 +55,15 @@ python evals/payout_eval.py        # 50 synthetic baseline vs ShowOnce payout ca
 
 For each new top-level Slack message containing `SLACK_TRIGGER` (default `bug`), ShowOnce creates a Linear issue, acknowledges in the Slack thread, fixes `sample_repo`, runs its real test, then closes the Linear issue (moves it to the team's Done state with a comment) and replies "Code has been fixed" in the thread. It also posts to Teams if `TEAMS_WEBHOOK_URL` is set. If the test still fails, the issue stays open with the test output attached. `watch` starts from "now", so older channel history is not processed; its position is kept in `evidence/slack_watch_state.json`.
 
+#### Setting up the Slack bot
+
+1. At https://api.slack.com/apps choose **Create an App → From a manifest**, pick your workspace, and paste `slack_manifest.json`.
+2. Install it, then copy the **Bot User OAuth Token** (`xoxb-…`) from **OAuth & Permissions** into `SLACK_BOT_TOKEN`.
+3. In Slack, create the channel named in `SLACK_CHANNEL` and run `/invite @showonce` there.
+4. Run `python cli.py check`. It only reads (auth, channel membership, Linear teams) and never posts or creates issues.
+
+Run the offline tests with `python -m unittest discover tests`.
+
 ## Architecture
 
 ```mermaid
