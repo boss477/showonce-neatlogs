@@ -23,6 +23,6 @@ class SampleRepo:
         return {"injected": True, "path": str(target)}
     def test(self) -> dict:
         # Run the repo's real test in a fresh interpreter so the edited module is re-imported.
-        result = subprocess.run([sys.executable, "-c", "import test_buggy; test_buggy.test_add()"], cwd=self.root, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, "-B", "-c", "import test_buggy; test_buggy.test_add()"], cwd=self.root, capture_output=True, text=True)
         return {"passed": result.returncode == 0, "output": (result.stdout + result.stderr).strip()[-500:]}
 
