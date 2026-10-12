@@ -11,11 +11,14 @@ except ImportError:  # pragma: no cover - enables the offline test path
     neatlogs = None
 
 def init_tracing() -> None:
-    if neatlogs is not None:
-        try:
-            neatlogs.init(project=os.getenv("NEATLOGS_PROJECT", "showonce"))
-        except TypeError:
-            neatlogs.init()
+    # Without a key, stay local; neatlogs.init() requires api_key in released versions.
+    api_key = os.getenv("NEATLOGS_PROJECT_KEY") or os.getenv("NEATLOGS_API_KEY")
+    if neatlogs is None or not api_key:
+        return
+    try:
+        neatlogs.init(api_key=api_key, tags=[os.getenv("NEATLOGS_PROJECT", "showonce")])
+    except TypeError:
+        neatlogs.init(api_key)
 
 @contextlib.contextmanager
 def span(name: str, **attributes):
@@ -24,7 +27,7 @@ def span(name: str, **attributes):
     yield
 
 def run_traced(name: str, fn, **attributes):
-    if neatlogs is None:
+    if neatlogs is None or not hasattr(neatlogs, "trace"):
         return fn()
     traced = neatlogs.trace(name, kind="chain", **attributes)(fn)
     return traced()
