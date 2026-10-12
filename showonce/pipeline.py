@@ -39,7 +39,13 @@ def watch(interval=15, once=False):
     slack, linear, teams = Slack(), Linear(), Teams()
     if not slack.live:
         raise SystemExit("SLACK_BOT_TOKEN is not set; use `python cli.py handle \"<bug report>\"` to run without Slack.")
-    state = json.loads(STATE_PATH.read_text()) if STATE_PATH.exists() else {"oldest": f"{time.time():.6f}"}
+    if STATE_PATH.exists():
+        state = json.loads(STATE_PATH.read_text())
+    else:
+        # Persist the start point now, so a later `watch --once` sees messages posted after this run.
+        state = {"oldest": f"{time.time():.6f}"}
+        STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        STATE_PATH.write_text(json.dumps(state) + "\n")
     print(f"Watching {slack.channel} for messages containing '{slack.trigger}' (Linear: {'live' if linear.live else 'MOCK'}, Teams: {'live' if teams.live else 'off'})")
     while True:
         for report in slack.fetch_bug_reports(state["oldest"]):
