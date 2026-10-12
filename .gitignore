@@ -7,3 +7,4 @@ evals/results/*
 sample_repo/.git/
 
 evidence/slack_watch_state.json
+.env.enc

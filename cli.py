@@ -1,13 +1,13 @@
 import argparse
 import json
-from dotenv import load_dotenv
+from showonce import secrets
 from showonce.runner import demo
 from showonce.pipeline import handle_bug_report, watch
 from showonce.adapters import SampleRepo
 from showonce.payout import decide
 
 if __name__ == "__main__":
-    load_dotenv()
+    secrets.load()
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("demo", help="offline recovery demo")
