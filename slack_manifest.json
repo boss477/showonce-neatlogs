@@ -1,0 +1,19 @@
+{
+  "display_information": {
+    "name": "ShowOnce",
+    "description": "Turns bug reports into Linear issues, fixes, and thread replies"
+  },
+  "features": {
+    "bot_user": { "display_name": "showonce", "always_online": true }
+  },
+  "oauth_config": {
+    "scopes": {
+      "bot": ["chat:write", "channels:history", "channels:read", "groups:history", "groups:read"]
+    }
+  },
+  "settings": {
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
