@@ -2,6 +2,7 @@ import argparse
 import json
 from showonce import doctor, secrets
 from showonce.runner import demo
+from showonce.live_demo import run_live_linear_demo
 from showonce.pipeline import handle_bug_report, watch
 from showonce.adapters import SampleRepo
 from showonce.payout import decide
@@ -11,6 +12,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("demo", help="offline recovery demo")
+    live = sub.add_parser("demo-live-linear", help="use NVIDIA and Linear live, with a real sample test")
+    live.add_argument("--issue-id", help="retry an existing Linear issue instead of creating another")
     w = sub.add_parser("watch", help="poll Slack for bug reports and run the fix pipeline")
     w.add_argument("--interval", type=int, default=15); w.add_argument("--once", action="store_true")
     h = sub.add_parser("handle", help="run the pipeline for one bug report without reading Slack")
@@ -21,6 +24,10 @@ if __name__ == "__main__":
     p.add_argument("country", choices=["ID", "IN", "PH"]); p.add_argument("provider", choices=["wise", "payoneer"]); p.add_argument("amount_usd")
     args = parser.parse_args()
     if args.command == "demo": print(demo())
+    elif args.command == "demo-live-linear":
+        result = run_live_linear_demo(args.issue_id)
+        print(json.dumps(result, indent=2))
+        if result["status"] != "Done": raise SystemExit(1)
     elif args.command == "watch": watch(args.interval, args.once)
     elif args.command == "handle": print(json.dumps(handle_bug_report(args.text), indent=2, default=str))
     elif args.command == "inject-bug": print(SampleRepo("sample_repo").inject_bug())

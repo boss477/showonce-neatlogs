@@ -1,8 +1,16 @@
 # ShowOnce
 
+Record the verified demo with [the 2-minute video script](docs/demo_video_script.md)
+and [its live-run evidence](evidence/live_nvidia_linear_run.md).
+
 ## Current verified demo
 
 Start `python -m showonce.server` and visit http://127.0.0.1:8765.
+To create a real Linear issue and use NVIDIA for the repair, run
+`python cli.py demo-live-linear`. This runs the real test on a temporary copy,
+asks NVIDIA for the one-line patch, and closes the issue only if the test passes.
+The issue records that Slack intake was unavailable and no production repo was
+changed. This command creates a real issue and consumes one model call.
 The control room executes a temporary sample repository, reproduces a bug,
 verifies a deliberately wrong first patch, restores its saved source/context,
 and verifies a deterministic second patch with three independent assertions.
