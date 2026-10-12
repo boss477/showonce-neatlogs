@@ -1,6 +1,6 @@
 import argparse
 import json
-from showonce import secrets
+from showonce import doctor, secrets
 from showonce.runner import demo
 from showonce.pipeline import handle_bug_report, watch
 from showonce.adapters import SampleRepo
@@ -16,11 +16,13 @@ if __name__ == "__main__":
     h = sub.add_parser("handle", help="run the pipeline for one bug report without reading Slack")
     h.add_argument("text")
     sub.add_parser("inject-bug", help="put the bug back into sample_repo/buggy.py")
-    p = sub.add_parser("payout", help="run the deterministic payout eligibility demo")
+    sub.add_parser("check", help="read-only checks of OpenAI, Slack and Linear credentials")
+    p =sub.add_parser("payout", help="run the deterministic payout eligibility demo")
     p.add_argument("country", choices=["ID", "IN", "PH"]); p.add_argument("provider", choices=["wise", "payoneer"]); p.add_argument("amount_usd")
     args = parser.parse_args()
     if args.command == "demo": print(demo())
     elif args.command == "watch": watch(args.interval, args.once)
     elif args.command == "handle": print(json.dumps(handle_bug_report(args.text), indent=2, default=str))
     elif args.command == "inject-bug": print(SampleRepo("sample_repo").inject_bug())
+    elif args.command == "check": raise SystemExit(0 if doctor.run() else 1)
     elif args.command == "payout": print(json.dumps(decide(args.country, args.provider, args.amount_usd).__dict__, indent=2))
