@@ -12,7 +12,8 @@ except ImportError:  # pragma: no cover - enables the offline test path
 
 def init_tracing() -> None:
     # Without a key, stay local; neatlogs.init() requires api_key in released versions.
-    api_key = os.getenv("NEATLOGS_PROJECT_KEY") or os.getenv("NEATLOGS_API_KEY")
+    api_key = (os.getenv("NEATLOGS_PROJECT_KEY") or os.getenv("NEATLOGS_API_KEY")
+               or os.getenv("NEATLOGS_http_ingest_KEY"))
     if neatlogs is None or not api_key:
         return
     try:

@@ -87,7 +87,7 @@ python evals/run_recovery.py
 
 Open `ui/index.html` in a browser for the controlled AG-UI-style Control Room demo. It streams the recovery story visually: failed test → Neatlogs trace inspection → Entire checkpoint → human approval → passing retry. The static UI is dependency-free; its event names and flow are ready to be replaced with a live AG-UI transport when the backend is deployed.
 
-Mock Slack and Linear adapters are labelled `MOCK` in code. The sample repo fix and test are real. Set `OPENAI_API_KEY` only when connecting an LLM compiler/judge; secrets are gitignored.
+Mock Slack and Linear adapters are labelled `MOCK` in code. The sample repo fix and test are real. Set either `OPENAI_API_KEY` or `NVIDIA_API_KEY` when connecting an LLM compiler/judge; NVIDIA uses its OpenAI-compatible endpoint by default. Secrets are gitignored.
 
 ## Sponsor tools
 

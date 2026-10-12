@@ -8,7 +8,7 @@ import urllib.error
 import urllib.request
 from .integrations import Linear, Slack
 
-REQUIRED = ["OPENAI_API_KEY", "NEATLOGS_PROJECT_KEY", "SLACK_BOT_TOKEN", "SLACK_CHANNEL", "LINEAR_API_KEY"]
+REQUIRED = ["model provider", "NEATLOGS_PROJECT_KEY", "SLACK_BOT_TOKEN", "SLACK_CHANNEL", "LINEAR_API_KEY"]
 
 def _line(name, ok, info=""):
     print(f"{'PASS' if ok else 'FAIL' if ok is False else 'SKIP'}  {name:24} {info}")
@@ -17,19 +17,50 @@ def _line(name, ok, info=""):
 def check_env():
     ok = True
     for key in REQUIRED:
-        present = bool(os.getenv(key) or (key == "NEATLOGS_PROJECT_KEY" and os.getenv("NEATLOGS_API_KEY")))
+        if key == "model provider":
+            present = bool(os.getenv("OPENAI_API_KEY") or os.getenv("NVIDIA_API_KEY"))
+        elif key == "NEATLOGS_PROJECT_KEY":
+            present = bool(os.getenv("NEATLOGS_PROJECT_KEY") or os.getenv("NEATLOGS_API_KEY") or os.getenv("NEATLOGS_http_ingest_KEY"))
+        else:
+            present = bool(os.getenv(key))
         ok &= _line(key,present or None, "present" if present else "missing (MOCK fallback)")
     return ok
 
-def check_openai():
-    key = os.getenv("OPENAI_API_KEY")
-    if not key: return _line("OpenAI", None, "no key")
-    request = urllib.request.Request("https://api.openai.com/v1/models", headers={"Authorization": f"Bearer {key}"})
+def check_model_provider():
+    nvidia_key = os.getenv("NVIDIA_API_KEY")
+    provider, key, base_url = (
+        ("NVIDIA", nvidia_key, os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"))
+        if nvidia_key else ("OpenAI", os.getenv("OPENAI_API_KEY"), "https://api.openai.com/v1")
+    )
+    if not key: return _line("Model provider", None, "no key")
+    request = urllib.request.Request(f"{base_url.rstrip('/')}/models", headers={"Authorization": f"Bearer {key}"})
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
-            return _line("OpenAI", True, f"{len(json.loads(response.read())['data'])} models visible")
+            model_count = len(json.loads(response.read())["data"])
+            return _line(provider, True, f"{model_count} models visible")
     except urllib.error.HTTPError as error:
-        return _line("OpenAI", False, f"HTTP {error.code}")
+        return _line(provider, False, f"HTTP {error.code}")
+
+def check_neatlogs():
+    key = (os.getenv("NEATLOGS_PROJECT_KEY") or os.getenv("NEATLOGS_API_KEY")
+           or os.getenv("NEATLOGS_http_ingest_KEY"))
+    if not key: return _line("Neatlogs MCP", None, "no project API key")
+    url = os.getenv("NEATLOGS_MCP_URL", "https://ingest.neatlogs.com/mcp")
+    payload = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+        "protocolVersion": "2024-11-05", "capabilities": {},
+        "clientInfo": {"name": "showonce-doctor", "version": "1.0"},
+    }}
+    request = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST", headers={
+        "Authorization": f"Bearer {key}", "Content-Type": "application/json",
+        "Accept": "application/json, text/event-stream",
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            return _line("Neatlogs MCP", True, f"initialize HTTP {response.status}")
+    except urllib.error.HTTPError as error:
+        return _line("Neatlogs MCP", False, f"HTTP {error.code}")
+    except urllib.error.URLError as error:
+        return _line("Neatlogs MCP", False, f"network error: {error.reason}")
 
 def check_slack():
     slack = Slack()
@@ -56,6 +87,6 @@ def check_linear():
         return _line("Linear", False, str(error))
 
 def run():
-    results = [check_env(), check_openai(), check_slack(), check_linear()]
+    results = [check_env(), check_model_provider(), check_neatlogs(), check_slack(), check_linear()]
     print("All live checks passed." if all(results) else "Some checks failed; fix them before running watch.")
     return all(results)

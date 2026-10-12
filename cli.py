@@ -16,7 +16,7 @@ if __name__ == "__main__":
     h = sub.add_parser("handle", help="run the pipeline for one bug report without reading Slack")
     h.add_argument("text")
     sub.add_parser("inject-bug", help="put the bug back into sample_repo/buggy.py")
-    sub.add_parser("check", help="read-only checks of OpenAI, Slack and Linear credentials")
+    sub.add_parser("check", help="read-only checks of NVIDIA/OpenAI, Neatlogs, Slack and Linear credentials")
     p =sub.add_parser("payout", help="run the deterministic payout eligibility demo")
     p.add_argument("country", choices=["ID", "IN", "PH"]); p.add_argument("provider", choices=["wise", "payoneer"]); p.add_argument("amount_usd")
     args = parser.parse_args()
