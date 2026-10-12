@@ -1,5 +1,214 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ShowOnce | Repair evidence</title>
-<style>body{background:#0b1019;color:#e5edf8;font:16px/1.6 system-ui;margin:0}main{max-width:1000px;margin:auto;padding:48px 24px}h1{font-size:48px;letter-spacing:-2px}p{color:#a3b5ce}button{background:#9be5bb;border:0;border-radius:9px;padding:14px 20px;font-weight:700;cursor:pointer}article{background:#131e2e;border:1px solid #2b3d55;border-radius:12px;margin:15px 0;padding:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}small{color:#9be5bb}button:disabled{opacity:.6}</style>
-<main><small>SHOWONCE / RECOVERY CONTROL ROOM</small><h1>A failed fix.<br>A verified recovery.</h1><p>Run an isolated sample repository. Inspect a wrong patch failing independent tests, its failure context, and a verified second repair.</p><p>Offline fixture · deterministic repair · local checkpoint · no external messages</p><button id="run">Run repair fixture</button><p id="status" role="status"></p><section id="events"></section></main>
-<script>document.querySelector('#run').onclick=async function(){this.disabled=true;const status=document.querySelector('#status'),events=document.querySelector('#events');events.replaceChildren();status.textContent='Running isolated tests…';try{const response=await fetch('/run',{method:'POST'});if(!response.ok)throw Error('Run failed');const result=await response.json();for(const event of result.events){const card=document.createElement('article'),title=document.createElement('h2'),detail=document.createElement('pre');title.textContent=event.name;detail.textContent=JSON.stringify(event.data,null,2);card.append(title,detail);events.append(card)}status.textContent=`${result.solved?'Verified recovery':'Unresolved'} · ${result.retries} retry · ${result.latency_ms} ms`}catch(error){status.textContent=error.message}finally{this.disabled=false}};</script></html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ShowOnce | Repair evidence</title>
+<meta name="description" content="Run ShowOnce's offline repair fixture: watch a wrong first patch fail real tests, the checkpoint restore, and a second repair pass independent verification.">
+<meta name="theme-color" content="#0b1019">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1019'/%3E%3Cpath d='M9 16.5l4.5 4.5L23 11' fill='none' stroke='%239be5bb' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+/* Layout: one left-aligned reading column. Hero → run control → verdict → the run as an ordered timeline (it is a real sequence). */
+:root {
+  --ground: #0b1019;
+  --panel: #131e2e;
+  --line: #2b3d55;
+  --text: #e5edf8;
+  --muted: #a3b5ce;
+  --mint: #9be5bb;
+  --fail: #f2948c;
+  --amber: #f1c67a;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--ground); color: var(--text); font: 16px/1.6 var(--sans); }
+main { max-width: 880px; margin: 0 auto; padding-inline: max(20px, env(safe-area-inset-left, 0px)); padding-block: clamp(32px, 7vw, 72px) 64px; display: grid; gap: 28px; }
+main > * { min-width: 0; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+
+.brand { color: var(--mint); font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.brand svg { width: 18px; height: 18px; }
+h1 { font-size: clamp(32px, 8vw, 52px); line-height: 1.04; letter-spacing: -.025em; font-weight: 750; }
+h1 span { display: block; color: var(--muted); }
+.lede { color: var(--muted); max-width: 62ch; font-size: 17px; }
+.hero { display: grid; gap: 16px; }
+
+.run-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+button { font: 650 16px/1 var(--sans); color: #0b1a12; background: var(--mint); border: 0; border-radius: 10px; min-height: 48px; padding: 0 22px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform .15s ease-out, background-color .15s ease-out; }
+button:hover { background: #b4eecd; }
+button:active { transform: scale(.98); }
+button:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+button:disabled { cursor: progress; background: #7fc59f; }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #0b1a1255; border-top-color: #0b1a12; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.status { color: var(--muted); font-size: 15px; }
+.status.error { color: var(--fail); }
+
+/* verdict */
+.verdict { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 22px clamp(18px, 4vw, 28px); display: grid; gap: 18px; }
+.verdict-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.verdict h2 { font-size: clamp(24px, 5vw, 30px); letter-spacing: -.01em; }
+.verdict.ok h2 { color: var(--mint); }
+.verdict.bad h2 { color: var(--fail); }
+.verdict-head p { color: var(--muted); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 0; }
+.facts div { border-top: 1px solid var(--line); padding-top: 10px; }
+.facts dt { color: var(--muted); font-size: 14px; }
+.facts dd { margin: 0; font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* timeline */
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.step { display: grid; grid-template-columns: 36px 1fr; gap: 0 16px; }
+.step > * { min-width: 0; }
+.rail { display: grid; grid-template-rows: 36px 1fr; justify-items: center; }
+.marker { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font: 700 15px/1 var(--sans); border: 2px solid var(--line); background: var(--ground); color: var(--muted); margin-top: 2px; }
+.rail::after { content: ""; width: 2px; background: var(--line); margin-block: 4px; }
+.step:last-child .rail::after { display: none; }
+.step[data-state="pass"] .marker { border-color: var(--mint); color: var(--mint); }
+.step[data-state="fail"] .marker { border-color: var(--fail); color: var(--fail); }
+.step[data-state="restore"] .marker, .step[data-state="change"] .marker { border-color: var(--amber); color: var(--amber); }
+.body { padding-bottom: 22px; display: grid; gap: 10px; }
+.title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; min-height: 36px; }
+.title-row h3 { font-size: 18px; font-weight: 650; }
+.chip { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.pass { color: var(--mint); border-color: color-mix(in srgb, var(--mint) 55%, transparent); }
+.chip.fail { color: var(--fail); border-color: color-mix(in srgb, var(--fail) 55%, transparent); }
+.chip.warn { color: var(--amber); border-color: color-mix(in srgb, var(--amber) 55%, transparent); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 15px; margin: 0; }
+.meta dt { display: inline; } .meta dd { display: inline; margin: 0 0 0 4px; color: var(--text); }
+.quote { color: var(--text); }
+pre { margin: 0; background: #0e1724; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font: 14px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: #c9d6e8; max-height: 18em; overflow: auto; }
+pre .add { color: var(--mint); } pre .del { color: var(--fail); } pre .hunk { color: var(--muted); }
+.empty { color: var(--muted); font-size: 15px; }
+
+.reveal { animation: rise .32s ease-out both; animation-delay: calc(var(--i, 0) * 45ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+@media (hover: hover) { .verdict { transition: border-color .2s ease-out; } .verdict:hover { border-color: #3a5170; } }
+@media (prefers-reduced-motion: reduce) { .reveal, .spinner { animation: none; } button { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <p class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 16.5l5.5 5.5L25 9.5" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>ShowOnce control room</p>
+    <h1>A failed fix. <span>A verified recovery.</span></h1>
+    <p class="lede">Run a throwaway copy of the sample repository. You'll see a wrong first patch fail the real tests, the saved checkpoint restored, and a second repair pass independent verification. It runs offline and sends nothing to Slack or Linear.</p>
+  </header>
+
+  <div class="run-row">
+    <button id="run" type="button"><span class="label">Run repair fixture</span></button>
+    <p id="status" class="status" role="status" aria-live="polite">Takes about a second.</p>
+  </div>
+
+  <section id="results" aria-label="Run results" hidden>
+    <div id="verdict" class="verdict reveal"></div>
+  </section>
+  <ol id="timeline" class="timeline" aria-label="What happened, in order"></ol>
+</main>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  const ms = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+  const btn = $("#run"), status = $("#status"), results = $("#results"), verdict = $("#verdict"), timeline = $("#timeline");
+
+  // What each step means, read from its data rather than its name.
+  function classify(d, reproduction) {
+    if ("passed" in d && reproduction && !d.passed) return ["fail", "✗", "Test fails, as expected", "warn"];
+    if ("passed" in d) return d.passed ? ["pass", "✓", "Passed", "pass"] : ["fail", "✗", "Failed", "fail"];
+    if ("restored" in d) return ["restore", "↺", d.restored ? "Restored" : "Not restored", "warn"];
+    if ("diff" in d) return ["change", "✎", "Code changed", "warn"];
+    if ("status" in d) return ["info", "•", d.status === "DRAFT" ? "Draft, not sent" : d.status, ""];
+    return ["info", "•", "Noted", ""];
+  }
+
+  function diffPre(text) {
+    const pre = el("pre");
+    text.split("\n").forEach((line, i, all) => {
+      const cls = line.startsWith("+") && !line.startsWith("+++") ? "add" : line.startsWith("-") && !line.startsWith("---") ? "del" : line.startsWith("@@") ? "hunk" : "";
+      pre.append(el("span", cls, line + (i < all.length - 1 ? "\n" : "")));
+    });
+    return pre;
+  }
+
+  function yesNo(v) { return v ? "yes" : "no"; }
+
+  function stepBody(name, d, reproduction) {
+    const body = el("div", "body");
+    const [, , chipText, chipCls] = classify(d, reproduction);
+    const row = el("div", "title-row");
+    row.append(el("h3", null, name), el("span", "chip " + chipCls, chipText));
+    body.append(row);
+
+    if (d.text) body.append(el("p", "quote", d.text));
+    if ("output" in d) {
+      if (d.output && d.output.trim()) body.append(el("pre", null, d.output.trim()));
+      else body.append(el("p", "empty", d.passed ? "All assertions passed. No errors." : "No output."));
+    }
+    if (d.diff) body.append(diffPre(d.diff.trimEnd()));
+
+    const meta = el("dl", "meta");
+    const add = (k, v) => { const w = el("div"); w.append(el("dt", null, k + ":"), el("dd", null, v)); meta.append(w); };
+    if (d.mode) add("Mode", d.mode);
+    if ("hosted_neatlogs" in d) add("Hosted Neatlogs trace", yesNo(d.hosted_neatlogs));
+    if ("entire_checkpoint" in d) add("Entire checkpoint", yesNo(d.entire_checkpoint));
+    if ("external_sent" in d) add("Sent to Slack or Linear", yesNo(d.external_sent));
+    if (meta.children.length) body.append(meta);
+    return body;
+  }
+
+  function render(result) {
+    const passed = result.events.filter(e => "passed" in e.data);
+    const firstPatchFailed = passed.length > 1 && !passed[1].data.passed;
+    verdict.className = "verdict reveal " + (result.solved ? "ok" : "bad");
+    verdict.replaceChildren();
+    const head = el("div", "verdict-head");
+    head.append(el("h2", null, result.solved ? "Recovered" : "Not recovered"),
+      el("p", null, result.solved
+        ? (firstPatchFailed ? "The first patch failed. The second repair passed independent tests." : "The repair passed independent tests.")
+        : "The final repair still fails its tests. Nothing was closed."));
+    const facts = el("dl", "facts");
+    [["Retries", String(result.retries)], ["Time", ms.format(result.latency_ms) + " ms"], ["Model calls", String(result.model_calls)], ["Bug reproduced first", yesNo(result.initial_failed)]]
+      .forEach(([k, v]) => { const w = el("div"); w.append(el("dt", null, k), el("dd", null, v)); facts.append(w); });
+    verdict.append(head, facts);
+
+    // The first test run reproduces the bug, so a failure there is the expected outcome.
+    const reproIndex = result.initial_failed ? result.events.findIndex(e => "passed" in e.data) : -1;
+    timeline.replaceChildren(...result.events.map((e, i) => {
+      const [state, icon] = classify(e.data, i === reproIndex);
+      const li = el("li", "step reveal"); li.dataset.state = state; li.style.setProperty("--i", i + 1);
+      const rail = el("div", "rail"); rail.setAttribute("aria-hidden", "true"); rail.append(el("span", "marker", icon));
+      li.append(rail, stepBody(e.name, e.data, i === reproIndex));
+      return li;
+    }));
+    results.hidden = false;
+  }
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true; results.setAttribute("aria-busy", "true");
+    btn.replaceChildren(el("span", "spinner"), el("span", "label", "Running tests…"));
+    status.className = "status"; status.textContent = "Running isolated tests…";
+    try {
+      const response = await fetch("/run", { method: "POST" });
+      if (!response.ok) throw new Error(`Run failed (HTTP ${response.status}). Check the terminal running showonce.server, then try again.`);
+      const result = await response.json();
+      render(result);
+      status.textContent = `${result.solved ? "Recovered" : "Not recovered"} in ${ms.format(result.latency_ms)} ms.`;
+    } catch (error) {
+      status.className = "status error";
+      status.textContent = error instanceof TypeError ? "Can't reach the server. Start it with: python -m showonce.server" : error.message;
+    } finally {
+      btn.disabled = false; results.removeAttribute("aria-busy");
+      btn.replaceChildren(el("span", "label", "Run again"));
+    }
+  });
+})();
+</script>
+</body>
+</html>
